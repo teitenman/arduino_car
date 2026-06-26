@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dart --version)",
+      "Bash(mkdir -p /Users/systemi/xsource/arduino_car/led_controller/.vscode)",
+      "Bash(flutter run *)",
+      "Bash(ls /dev/cu.* 2>/dev/null)",
+      "Read(//dev/**)"
+    ],
+    "additionalDirectories": [
+      "/Users/systemi/xsource/arduino_car/led_controller"
+    ]
+  }
+}

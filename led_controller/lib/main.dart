@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -17,7 +18,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Arduino LED Controller',
+      title: 'Arduino Car Controller',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
@@ -40,24 +41,27 @@ class _LedControlPageState extends State<LedControlPage> {
   BluetoothCharacteristic? _char;
   bool _connected = false;
   bool _scanning = false;
+  bool _connecting = false;
   bool? _ledOn;
   String? _errorMsg;
+  List<String> _foundDevices = [];
 
   StreamSubscription<List<ScanResult>>? _scanSub;
   StreamSubscription<BluetoothConnectionState>? _connSub;
 
   // ── スキャン開始 ──────────────────────────────────────────────────────────
   Future<void> _startScan() async {
-    // パーミッション確認
-    final statuses = await [
-      Permission.bluetoothScan,
-      Permission.bluetoothConnect,
-      Permission.location,
-    ].request();
+    if (Platform.isAndroid) {
+      final statuses = await [
+        Permission.bluetoothScan,
+        Permission.bluetoothConnect,
+        Permission.location,
+      ].request();
 
-    if (statuses.values.any((s) => s.isDenied || s.isPermanentlyDenied)) {
-      setState(() => _errorMsg = 'Bluetooth permission denied');
-      return;
+      if (statuses.values.any((s) => s.isDenied || s.isPermanentlyDenied)) {
+        setState(() => _errorMsg = 'Bluetooth permission denied');
+        return;
+      }
     }
 
     setState(() {
@@ -65,10 +69,53 @@ class _LedControlPageState extends State<LedControlPage> {
       _errorMsg = null;
     });
 
+    // アダプタが ON になるまで待つ（許可直後は準備中のことがある）
+    try {
+      await FlutterBluePlus.adapterState
+          .where((s) => s == BluetoothAdapterState.on)
+          .first
+          .timeout(const Duration(seconds: 5));
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _scanning = false;
+          _errorMsg = 'Bluetooth がオフです。設定から有効にしてください';
+        });
+      }
+      return;
+    }
+
+    // 前回のスキャンが残っていればクリア
+    if (FlutterBluePlus.isScanningNow) {
+      await FlutterBluePlus.stopScan();
+    }
+
+    _connecting = false;
+    _foundDevices = [];
     _scanSub?.cancel();
-    _scanSub = FlutterBluePlus.scanResults.listen((results) {
+
+    _scanSub = FlutterBluePlus.onScanResults.listen((results) {
+      if (_connecting) return;
+      // for (final r in results) {
+      //   debugPrint('[BLE] ${r.device.platformName.isEmpty ? "(no name)" : r.device.platformName} | ${r.device.remoteId} | RSSI:${r.rssi}');
+      // }
+      setState(() {
+        _foundDevices = results
+            .map(
+              (r) =>
+                  '${r.device.platformName.isEmpty ? "(no name)" : r.device.platformName} [${r.device.remoteId}]',
+            )
+            .toList();
+      });
       for (final r in results) {
-        if (r.device.platformName == _deviceName) {
+        final nameMatch =
+            r.device.platformName == _deviceName ||
+            r.device.platformName == 'Arduino';
+        final uuidMatch = r.advertisementData.serviceUuids.any(
+          (u) => u.str128.toUpperCase().contains(_serviceUuid),
+        );
+        if (nameMatch || uuidMatch) {
+          _connecting = true;
           FlutterBluePlus.stopScan();
           _connect(r.device);
           break;
@@ -76,9 +123,26 @@ class _LedControlPageState extends State<LedControlPage> {
       }
     });
 
-    await FlutterBluePlus.startScan(timeout: const Duration(seconds: 10));
+    try {
+      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 10));
+      // iOS では startScan が即 return するため、スキャン終了まで明示的に待つ
+      if (FlutterBluePlus.isScanningNow) {
+        await FlutterBluePlus.isScanning
+            .where((scanning) => scanning == false)
+            .first
+            .timeout(const Duration(seconds: 11));
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _scanning = false;
+          _errorMsg = 'スキャンエラー: $e';
+        });
+      }
+      return;
+    }
 
-    if (mounted && _device == null) {
+    if (mounted && !_connecting) {
       setState(() {
         _scanning = false;
         _errorMsg = '"$_deviceName" が見つかりませんでした';
@@ -164,7 +228,7 @@ class _LedControlPageState extends State<LedControlPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Arduino LED Controller'),
+        title: const Text('Arduino Car Controller'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           if (_connected)
@@ -177,9 +241,7 @@ class _LedControlPageState extends State<LedControlPage> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(24),
-        child: Center(
-          child: _connected ? _buildControls() : _buildScanView(),
-        ),
+        child: Center(child: _connected ? _buildControls() : _buildScanView()),
       ),
     );
   }
@@ -206,9 +268,11 @@ class _LedControlPageState extends State<LedControlPage> {
           ),
         if (_errorMsg != null) ...[
           const SizedBox(height: 20),
-          Text(_errorMsg!,
-              style: const TextStyle(color: Colors.red),
-              textAlign: TextAlign.center),
+          Text(
+            _errorMsg!,
+            style: const TextStyle(color: Colors.red),
+            textAlign: TextAlign.center,
+          ),
         ],
       ],
     );
@@ -219,8 +283,8 @@ class _LedControlPageState extends State<LedControlPage> {
     final ledColor = _ledOn == null
         ? Colors.grey
         : _ledOn!
-            ? Colors.yellow
-            : Colors.grey.shade700;
+        ? Colors.yellow
+        : Colors.grey.shade700;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -239,7 +303,7 @@ class _LedControlPageState extends State<LedControlPage> {
                       color: Colors.yellow.withValues(alpha: 0.6),
                       blurRadius: 40,
                       spreadRadius: 12,
-                    )
+                    ),
                   ]
                 : [],
           ),
@@ -278,9 +342,10 @@ class _LedControlPageState extends State<LedControlPage> {
                   backgroundColor: Colors.amber,
                   foregroundColor: Colors.black87,
                 ),
-                child: const Text('ON',
-                    style:
-                        TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'ON',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
             const SizedBox(width: 24),
@@ -296,9 +361,10 @@ class _LedControlPageState extends State<LedControlPage> {
                   backgroundColor: Colors.blueGrey.shade700,
                   foregroundColor: Colors.white,
                 ),
-                child: const Text('OFF',
-                    style:
-                        TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'OFF',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
           ],
@@ -306,9 +372,11 @@ class _LedControlPageState extends State<LedControlPage> {
 
         if (_errorMsg != null) ...[
           const SizedBox(height: 20),
-          Text(_errorMsg!,
-              style: const TextStyle(color: Colors.red),
-              textAlign: TextAlign.center),
+          Text(
+            _errorMsg!,
+            style: const TextStyle(color: Colors.red),
+            textAlign: TextAlign.center,
+          ),
         ],
       ],
     );

@@ -1,0 +1,37 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flutter (iOS Device - ddpp)",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "00008110-001E05A91AC2801E",
+      "program": "lib/main.dart",
+      "args": ["--debug"]
+    },
+    {
+      "name": "Flutter (iOS Simulator)",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "97CD7B77-5BD4-4230-9913-90FA361CE9B2",
+      "program": "lib/main.dart",
+      "args": ["--debug"]
+    },
+    {
+      "name": "Flutter (Android Emulator)",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "emulator-5554",
+      "program": "lib/main.dart",
+      "args": ["--debug"]
+    },
+    {
+      "name": "Flutter (macOS)",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "macos",
+      "program": "lib/main.dart",
+      "args": ["--debug"]
+    }
+  ]
+}
