@@ -1,0 +1,33 @@
+{
+  "configurations": [
+    {
+      "name": "Arduino R4 WiFi",
+      "includePath": [
+        "${workspaceFolder}/**",
+        "${userHome}/Library/Arduino15/packages/arduino/hardware/renesas_uno/1.6.0/cores/arduino",
+        "${userHome}/Library/Arduino15/packages/arduino/hardware/renesas_uno/1.6.0/cores/arduino/tinyusb",
+        "${userHome}/Library/Arduino15/packages/arduino/hardware/renesas_uno/1.6.0/libraries/**",
+        "${userHome}/Library/Arduino15/packages/arduino/hardware/renesas_uno/1.6.0/variants/UNOWIFIR4",
+        "${userHome}/Library/Arduino15/packages/arduino/hardware/renesas_uno/1.6.0/variants/UNOWIFIR4/includes",
+        "${userHome}/Library/Arduino15/packages/arduino/hardware/renesas_uno/1.6.0/variants/UNOWIFIR4/includes/ra/**",
+        "${userHome}/Library/Arduino15/packages/arduino/hardware/renesas_uno/1.6.0/variants/UNOWIFIR4/includes/ra_cfg/**",
+        "${userHome}/Library/Arduino15/packages/arduino/hardware/renesas_uno/1.6.0/variants/UNOWIFIR4/includes/ra_gen/**",
+        "${userHome}/Library/Arduino15/packages/arduino/tools/arm-none-eabi-gcc/7-2017q4/arm-none-eabi/include",
+        "${userHome}/Library/Arduino15/packages/arduino/tools/arm-none-eabi-gcc/7-2017q4/arm-none-eabi/include/c++/**",
+        "${userHome}/Documents/Arduino/libraries/ArduinoBLE/src",
+        "${userHome}/Documents/Arduino/libraries/**"
+      ],
+      "defines": [
+        "ARDUINO=10607",
+        "ARDUINO_UNOWIFIR4",
+        "__ARM_ARCH_7EM__",
+        "__FPU_PRESENT=1"
+      ],
+      "compilerPath": "${userHome}/Library/Arduino15/packages/arduino/tools/arm-none-eabi-gcc/7-2017q4/bin/arm-none-eabi-gcc",
+      "cStandard": "c11",
+      "cppStandard": "c++17",
+      "intelliSenseMode": "gcc-arm"
+    }
+  ],
+  "version": 4
+}
