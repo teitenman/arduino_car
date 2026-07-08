@@ -103,7 +103,6 @@ void setup() {
   Serial.begin(115200);
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW);
-
   matrix.begin();
 
   rowsToFrame(rowsF,  frameF);
@@ -159,7 +158,7 @@ void loop() {
       uint32_t* frame = frameS;
       bool motorOn = true;
 
-      if      (strcmp(cmd, "F")  == 0) frame = frameF;
+      if      (strcmp(cmd, "F")  == 0);
       else if (strcmp(cmd, "B")  == 0) frame = frameB;
       else if (strcmp(cmd, "L")  == 0) frame = frameL;
       else if (strcmp(cmd, "R")  == 0) frame = frameR;
