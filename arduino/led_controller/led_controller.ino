@@ -7,6 +7,31 @@ BLEService carService("FFE0");
 // 2-byte max to support combined commands: "F","B","L","R","FL","FR","BL","BR","S"
 BLECharacteristic carChar("FFE1", BLEWrite | BLEWriteWithoutResponse | BLERead, 2);
 
+// ── Motor driver (TB6612FNG, channel A only) ───────────────────────────────────
+const int PIN_STBY = 8;
+const int PIN_PWMA = 9;
+const int PIN_AIN1 = 7;
+const int PIN_AIN2 = 6;
+const int MOTOR_SPEED = 200;  // 0-255
+
+void motorForward(int speed) {
+  digitalWrite(PIN_AIN1, HIGH);
+  digitalWrite(PIN_AIN2, LOW);
+  analogWrite(PIN_PWMA, speed);
+}
+
+void motorBackward(int speed) {
+  digitalWrite(PIN_AIN1, LOW);
+  digitalWrite(PIN_AIN2, HIGH);
+  analogWrite(PIN_PWMA, speed);
+}
+
+void motorStop() {
+  digitalWrite(PIN_AIN1, LOW);
+  digitalWrite(PIN_AIN2, LOW);
+  analogWrite(PIN_PWMA, 0);
+}
+
 // ── Advertising & error animations ────────────────────────────────────────────
 
 const uint32_t advAnim[][4] = {
@@ -105,6 +130,15 @@ void setup() {
   digitalWrite(LED_BUILTIN, LOW);
   matrix.begin();
 
+  pinMode(PIN_STBY, OUTPUT);
+  pinMode(PIN_PWMA, OUTPUT);
+  pinMode(PIN_AIN1, OUTPUT);
+  pinMode(PIN_AIN2, OUTPUT);
+  digitalWrite(PIN_STBY, HIGH);  // enable driver
+  motorStop();
+  // motorForward(MOTOR_SPEED);
+  // while(true){};
+
   rowsToFrame(rowsF,  frameF);
   rowsToFrame(rowsB,  frameB);
   rowsToFrame(rowsL,  frameL);
@@ -158,21 +192,24 @@ void loop() {
       uint32_t* frame = frameS;
       bool motorOn = true;
 
-      if      (strcmp(cmd, "F")  == 0);
-      else if (strcmp(cmd, "B")  == 0) frame = frameB;
-      else if (strcmp(cmd, "L")  == 0) frame = frameL;
-      else if (strcmp(cmd, "R")  == 0) frame = frameR;
-      else if (strcmp(cmd, "FL") == 0) frame = frameFL;
-      else if (strcmp(cmd, "FR") == 0) frame = frameFR;
-      else if (strcmp(cmd, "BL") == 0) frame = frameBL;
-      else if (strcmp(cmd, "BR") == 0) frame = frameBR;
-      else { motorOn = false; }
+      // Only F/B drive the motor (single TB6612FNG channel wired); turning
+      // commands are LED-only until a second motor channel is added.
+      if      (strcmp(cmd, "F")  == 0) { frame = frameF;  motorForward(MOTOR_SPEED); }
+      else if (strcmp(cmd, "B")  == 0) { frame = frameB;  motorBackward(MOTOR_SPEED); }
+      else if (strcmp(cmd, "L")  == 0) { frame = frameL;  motorStop(); }
+      else if (strcmp(cmd, "R")  == 0) { frame = frameR;  motorStop(); }
+      else if (strcmp(cmd, "FL") == 0) { frame = frameFL; motorStop(); }
+      else if (strcmp(cmd, "FR") == 0) { frame = frameFR; motorStop(); }
+      else if (strcmp(cmd, "BL") == 0) { frame = frameBL; motorStop(); }
+      else if (strcmp(cmd, "BR") == 0) { frame = frameBR; motorStop(); }
+      else { motorOn = false; motorStop(); }
 
       matrix.loadFrame(frame);
       digitalWrite(LED_BUILTIN, motorOn ? HIGH : LOW);
     }
   }
 
+  motorStop();
   Serial.println("Disconnected");
   flash(1, 300, 0);
   startAdvertising();

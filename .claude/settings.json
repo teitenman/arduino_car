@@ -5,7 +5,8 @@
       "Bash(mkdir -p /Users/systemi/xsource/arduino_car/led_controller/.vscode)",
       "Bash(flutter run *)",
       "Bash(ls /dev/cu.* 2>/dev/null)",
-      "Read(//dev/**)"
+      "Read(//dev/**)",
+      "Bash(flutter build *)"
     ],
     "additionalDirectories": [
       "/Users/systemi/xsource/arduino_car/led_controller"

@@ -69,8 +69,16 @@ class _CarControlPageState extends State<CarControlPage>
 
   // Compute the combined command from current pedal + steering state
   String _computeCommand() {
-    final speed = _accelerating ? 'F' : _braking ? 'B' : '';
-    final dir = _steeringAngle < -0.25 ? 'L' : _steeringAngle > 0.25 ? 'R' : '';
+    final speed = _accelerating
+        ? 'F'
+        : _braking
+        ? 'B'
+        : '';
+    final dir = _steeringAngle < -0.25
+        ? 'L'
+        : _steeringAngle > 0.25
+        ? 'R'
+        : '';
     final cmd = speed + dir;
     return cmd.isEmpty ? 'S' : cmd;
   }
@@ -218,12 +226,17 @@ class _CarControlPageState extends State<CarControlPage>
       if (!mounted) return;
       if (state == BluetoothConnectionState.connected) {
         await _discoverChar(device);
-        if (mounted) setState(() => _connected = true);
+        if (mounted)
+          setState(() {
+            _connected = true;
+            _connecting = false;
+          });
       } else if (state == BluetoothConnectionState.disconnected) {
         if (mounted)
           setState(() {
             _connected = false;
             _char = null;
+            _connecting = false;
           });
       }
     });
@@ -254,7 +267,11 @@ class _CarControlPageState extends State<CarControlPage>
     _cmdBusy = true;
     try {
       await _char!.write(cmd.codeUnits, withoutResponse: true);
-      if (mounted) setState(() { _lastCommand = cmd; _errorMsg = null; });
+      if (mounted)
+        setState(() {
+          _lastCommand = cmd;
+          _errorMsg = null;
+        });
     } catch (e) {
       if (mounted) setState(() => _errorMsg = '送信エラー: $e');
     } finally {
@@ -435,15 +452,24 @@ class _StatusStrip extends StatelessWidget {
 
   String get _cmdLabel {
     switch (command) {
-      case 'F':  return '▲ FORWARD';
-      case 'B':  return '▼ BRAKE';
-      case 'L':  return '◀ LEFT';
-      case 'R':  return 'RIGHT ▶';
-      case 'FL': return '↖ FWD-L';
-      case 'FR': return '↗ FWD-R';
-      case 'BL': return '↙ BRK-L';
-      case 'BR': return '↘ BRK-R';
-      default:   return '■ STOP';
+      case 'F':
+        return '▲ FORWARD';
+      case 'B':
+        return '▼ BRAKE';
+      case 'L':
+        return '◀ LEFT';
+      case 'R':
+        return 'RIGHT ▶';
+      case 'FL':
+        return '↖ FWD-L';
+      case 'FR':
+        return '↗ FWD-R';
+      case 'BL':
+        return '↙ BRK-L';
+      case 'BR':
+        return '↘ BRK-R';
+      default:
+        return '■ STOP';
     }
   }
 
